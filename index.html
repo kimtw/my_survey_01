@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Survey</title>
+    <!-- jsPsych 라이브러리 로드 -->
+    <script src="https://unpkg.com/jspsych@7.3.4"></script>
+    <!-- 필요한 플러그인들 로드 -->
+    <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-survey-text@1.1.3"></script>
+    <!-- jsPsych 기본 스타일 -->
+    <link href="https://unpkg.com/jspsych@7.3.4/css/jspsych.css" rel="stylesheet" type="text/css" />
+    <!-- 모바일 최적화 스타일 -->
+    <style>
+        /* 모바일에서 텍스트 크기 조정 */
+        @media (max-width: 768px) {
+            body {
+                font-size: 18px !important;
+            }
+            
+            .jspsych-content {
+                font-size: 16px !important;
+                line-height: 1.6 !important;
+            }
+            
+            h4 {
+                font-size: 20px !important;
+            }
+            
+            /* 노란색 자극어 크기 조정 */
+            span[style*="background-color: #ffeb3b"] {
+                font-size: 28px !important;
+            }
+            
+            /* 대화 내용 크기 조정 */
+            div[style*="font-family: monospace"] {
+                font-size: 16px !important;
+            }
+        }
+    </style>
+</head>
+</head>
+<body></body>
+<script>
+
+    // jsPsych 초기화
+    var jsPsych = initJsPsych({
+        on_finish: function() {
+            // 실험 끝나면 결과 화면에 표시 (나중에 서버 저장으로 변경 예정)
+            jsPsych.data.displayData();
+        }
+    });
+
+    // 실험 순서를 담을 배열
+    var timeline = [];
+
+    // 1. 환영 메시지
+    var welcome = {
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: `
+            <h2>설문조사에 참여해주셔서 감사합니다!</h2>
+            <p>이 설문은 다섯 문항으로 이루어져 있고 약 2분 정도 소요됩니다.</p>
+            <p><strong>스페이스바를 눌러 시작하세요.</strong></p>
+        `,
+        choices: [' '] // 스페이스바만 허용
+    };
+
+    // 2. 일반 텍스트 질문들
+    var basic_questions = {
+        type: jsPsychSurveyText,
+        questions: [
+            {
+                prompt: '(만) 나이를 입력해주세요.', 
+                name: 'age',
+                required: true
+            },
+            {
+                prompt: '성별을 입력해 주세요.', 
+                name: 'sex',
+                required: true
+            },
+            {
+                prompt: '현재 재학 중인 학교와 학과를 입력해 주세요(없으면 "없음"으로 입력):', 
+                name: 'school_department',
+                required: true
+            },
+            {
+                prompt: '주 성장 지역(학창 시절을 오래 보낸 지역)은 어디입니까?:', 
+                name: 'growth_location',
+                required: true
+            },
+            {
+                prompt: '부모님의 주 성장 지역(학창 시절을 오래 보낸 지역)은 어디입니까?:', 
+                name: 'parents_region',
+                required: true
+            }
+        ],
+        preamble: '<h3>기본 정보</h3>'
+    };
+
+    // 전역 변수 (각 문항용)
+    var rtData = {};
+
+    // 반응시간 측정 함수 (공통)
+    function createRTQuestion(prompt_content, response_name, scenario_name, question_number) {
+        return {
+            type: jsPsychSurveyText,
+            questions: [
+                {
+                    prompt: prompt_content,
+                    name: response_name,
+                    required: true
+                }
+            ],
+            data: {
+                task_type: 'conversation_reaction_time',
+                scenario: scenario_name,
+                question_number: question_number
+            },
+            on_load: function() {
+                var questionStartTime = performance.now();
+                var firstKeyPressed = false;
+                rtData[question_number] = null;
+                
+                console.log('문항 ' + question_number + ' (' + scenario_name + ') 로드됨');
+                
+                setTimeout(function() {
+                    var inputField = document.querySelector('input[type="text"]');
+                    console.log('입력 필드 찾기 결과:', inputField ? '성공' : '실패');
+                    
+                    if (inputField) {
+                        console.log('✅ ' + scenario_name + ' 반응시간 측정 준비 완료');
+                        
+                        inputField.addEventListener('input', function(e) {
+                            console.log('입력 이벤트 발생:', e.target.value);
+                            
+                            if (!firstKeyPressed) {
+                                rtData[question_number] = Math.round(performance.now() - questionStartTime);
+                                firstKeyPressed = true;
+                                console.log('🎯 ' + scenario_name + ' 첫 키 입력 반응시간: ' + rtData[question_number] + 'ms');
+                            }
+                        });
+                        
+                        inputField.focus();
+                        
+                    } else {
+                        console.log('❌ ' + scenario_name + ' 입력 필드를 찾을 수 없음');
+                    }
+                }, 1000);
+            },
+            on_finish: function(data) {
+                if (rtData[question_number] !== null) {
+                    data.first_key_rt = rtData[question_number];
+                    console.log('✅ ' + scenario_name + ' 반응시간 데이터 저장: ' + rtData[question_number] + 'ms');
+                } else {
+                    console.log('❌ ' + scenario_name + ' 반응시간 측정 실패 - 데이터가 null');
+                }
+            }
+        };
+    }
+
+    // 3. 대화 상황 반응시간 측정 문항들
+    var conversation_rt_question = createRTQuestion(
+        `<div style="background-color: #f9f9f9; padding: 20px; border-radius: 10px; line-height: 1.6;">
+<h4 style="margin-top: 0; color: #333;">다음 대화를 읽고 빈칸에 들어갈 적절한 말을 입력하세요:</h4>
+
+<div style="background-color: white; padding: 15px; border-left: 4px solid #4CAF50; margin: 15px 0;">
+<strong>상황:</strong> A가 길을 가다가 유튜브 크리에이터 B를 만난 상황
+</div>
+
+<div style="font-family: monospace; background-color: white; padding: 15px; border: 1px solid #ddd;">
+<div style="margin-bottom: 8px;"><strong>A:</strong> 어!! 안녕하세요. 저 유튜브에서 봤어요!</div>
+<div style="margin-bottom: 8px;"><strong>B:</strong> 안녕하세요~ 정말요??</div>
+<div style="margin-bottom: 8px;"><strong>A:</strong> 네!!</div>
+<div style="margin-bottom: 8px;"><strong>B:</strong> 감사합니다~ 제 영상 어떻게 보셨어요?</div>
+<div style="margin-bottom: 8px;"><strong>A:</strong> <span style="background-color: #ffeb3b; padding: 2px 5px;">__________</span> 봤어요!</div>
+</div>
+
+
+</div>`,
+        'conversation_response_0',
+        '유튜버 만남',
+        1
+    );
+
+    var conversation_rt_question_1 = createRTQuestion(
+        `<div style="background-color: #f9f9f9; padding: 20px; border-radius: 10px; line-height: 1.6;">
+<h4 style="margin-top: 0; color: #333;">다음 대화를 읽고 빈칸에 들어갈 적절한 말을 입력하세요:</h4>
+
+<div style="background-color: white; padding: 15px; border-left: 4px solid #FF9800; margin: 15px 0;">
+<strong>상황:</strong> A가 길을 가다가 유명 쉐프 B를 만난 상황
+</div>
+
+<div style="font-family: monospace; background-color: white; padding: 15px; border: 1px solid #ddd;">
+<div style="margin-bottom: 8px;"><strong>A:</strong> 어? 혹시... B 쉐프님이세요?</div>
+<div style="margin-bottom: 8px;"><strong>B:</strong> 아, 네 맞습니다.</div>
+<div style="margin-bottom: 8px;"><strong>A:</strong> 지난번에 쉐프 님 식당에서 식사했어요!!</div>
+<div style="margin-bottom: 8px;"><strong>B:</strong> 아, 정말요? 감사합니다. 어떻게 드셨어요?</div>
+<div style="margin-bottom: 8px;"><strong>A:</strong> <span style="background-color: #ffeb3b; padding: 2px 5px;">__________</span> 먹었어요!</div>
+</div>
+
+
+</div>`,
+        'conversation_response_1',
+        '쉐프 만남',
+        2
+    );
+
+    var conversation_rt_question_2 = createRTQuestion(
+        `<div style="background-color: #f9f9f9; padding: 20px; border-radius: 10px; line-height: 1.6;">
+<h4 style="margin-top: 0; color: #333;">다음 대화를 읽고 빈칸에 들어갈 적절한 말을 입력하세요:</h4>
+
+<div style="background-color: white; padding: 15px; border-left: 4px solid #E91E63; margin: 15px 0;">
+<strong>상황:</strong> 신부 B의 결혼식장에서
+</div>
+
+<div style="font-family: monospace; background-color: white; padding: 15px; border: 1px solid #ddd;">
+<div style="margin-bottom: 8px;"><strong>A:</strong> 오랜만이야. 결혼 축하해.</div>
+<div style="margin-bottom: 8px;"><strong>B:</strong> 어? A? 정말 오랜만이다! 어떻게 왔어!</div>
+<div style="margin-bottom: 8px;"><strong>A:</strong> <span style="background-color: #ffeb3b; padding: 2px 5px;">__________</span> 왔지.</div>
+</div>
+
+
+</div>`,
+        'conversation_response_2',
+        '결혼식',
+        3
+    );
+
+    var conversation_rt_question_3 = createRTQuestion(
+        `<div style="background-color: #f9f9f9; padding: 20px; border-radius: 10px; line-height: 1.6;">
+<h4 style="margin-top: 0; color: #333;">다음 대화를 읽고 빈칸에 들어갈 적절한 말을 입력하세요:</h4>
+
+<div style="background-color: white; padding: 15px; border-left: 4px solid #9C27B0; margin: 15px 0;">
+<strong>상황:</strong> 독자 A가 팬 사인회 자리에서 작가 B를 만난 상황
+</div>
+
+<div style="font-family: monospace; background-color: white; padding: 15px; border: 1px solid #ddd;">
+<div style="margin-bottom: 8px;"><strong>A:</strong> 안녕하세요! 정말 뵙고 싶었습니다.</div>
+<div style="margin-bottom: 8px;"><strong>B:</strong> 네, 반갑습니다 A님. 제 책을 어떻게 읽으셨나요?</div>
+<div style="margin-bottom: 8px;"><strong>A:</strong> <span style="background-color: #ffeb3b; padding: 2px 5px;">__________</span> 읽었어요!</div>
+</div>
+
+
+</div>`,
+        'conversation_response_3',
+        '팬 사인회',
+        4
+    );
+
+    var conversation_rt_question_4 = createRTQuestion(
+        `<div style="background-color: #f9f9f9; padding: 20px; border-radius: 10px; line-height: 1.6;">
+<h4 style="margin-top: 0; color: #333;">다음 대화를 읽고 빈칸에 들어갈 적절한 말을 입력하세요:</h4>
+
+<div style="background-color: white; padding: 15px; border-left: 4px solid #4CAF50; margin: 15px 0;">
+<strong>상황:</strong> 고양이에 대한 대화
+</div>
+
+<div style="font-family: monospace; background-color: white; padding: 15px; border: 1px solid #ddd;">
+<div style="margin-bottom: 8px;"><strong>A:</strong> 너 고양이 유기묘 센터에서 데려왔지?</div>
+<div style="margin-bottom: 8px;"><strong>B:</strong> 응. 거기서 처음 데려올 때 고생했어.</div>
+<div style="margin-bottom: 8px;"><strong>A:</strong> 왜 고생해?</div>
+<div style="margin-bottom: 8px;"><strong>B:</strong> 안 오려고 해서.</div>
+<div style="margin-bottom: 8px;"><strong>A:</strong> 그럼 어떻게 데려왔어?</div>
+<div style="margin-bottom: 8px;"><strong>B:</strong> <span style="background-color: #ffeb3b; padding: 2px 5px;">__________</span> 데려왔지.</div>
+</div>
+
+
+</div>`,
+        'conversation_response_4',
+        '고양이 입양',
+        5
+    );
+
+    // 5. 마무리 메시지
+    var debrief = {
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: `
+            <h2>설문조사가 완료되었습니다!</h2>
+            <p>참여해주셔서 감사합니다.</p>
+            <p>스페이스바를 눌러 결과를 확인하세요.</p>
+        `,
+        choices: [' ']
+    };
+
+    // 실험 순서 설정
+// 대화 상황 문항들을 배열에 담기
+    var conversation_questions = [
+        conversation_rt_question,     // 유튜버 만남
+        conversation_rt_question_1,   // 쉐프 만남  
+        conversation_rt_question_2,   // 결혼식
+        conversation_rt_question_3,   // 팬 사인회
+        conversation_rt_question_4    // 고양이 입양
+    ];
+
+    // 배열 순서 랜덤하게 섞기
+    conversation_questions = jsPsych.randomization.shuffle(conversation_questions);
+
+    // 실험 순서 설정
+    timeline.push(welcome);
+    timeline.push(basic_questions);
+    
+    // 랜덤 순서로 대화 문항들 추가
+    for (var i = 0; i < conversation_questions.length; i++) {
+        timeline.push(conversation_questions[i]);
+    }
+    
+    timeline.push(debrief);
+
+    // 실험 시작!
+    jsPsych.run(timeline);
+
+</script>
+</html>
