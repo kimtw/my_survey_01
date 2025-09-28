@@ -45,28 +45,73 @@
     // jsPsych 초기화
     var jsPsych = initJsPsych({
         on_finish: function() {
-        // 간단한 테스트 데이터
-            var testData = {
-                age: 'test',
-                sex: 'test',
-                timestamp: new Date().toString()
-            };
+        // 올바른 데이터 접근 방식
+        var allData = jsPsych.data.get().values();
+        console.log('전체 데이터:', allData);
+        
+        // 기본 정보 데이터 찾기
+        var basicInfo = null;
+        var rtResults = [];
+        
+        for (var i = 0; i < allData.length; i++) {
+            console.log('데이터 ' + i + ':', allData[i]);
             
-            var scriptURL = 'https://script.google.com/macros/s/AKfycby8S_WhuthXrVQUCATPJZrhbLaLq1XnIygsuRsu1ickSN4NgmV-O0K7RySaxhKStojD/exec';
+            if (allData[i].trial_type === 'survey-text') {
+                if (!allData[i].task_type) {
+                    // 기본 정보 문항 (task_type이 없는 survey-text)
+                    basicInfo = allData[i].response;
+                    console.log('기본 정보 발견:', basicInfo);
+                }
+            }
             
-            console.log('데이터 전송 시도:', testData);
-            
-            fetch(scriptURL, {
-                method: 'POST',
-                body: JSON.stringify(testData)
-            }).then(response => {
-                console.log('전송 성공:', response);
-                document.body.innerHTML = '<div style="text-align: center; padding: 50px;"><h2>제출 완료!</h2></div>';
-            }).catch(error => {
-                console.log('전송 실패:', error);
-                document.body.innerHTML = '<div style="text-align: center; padding: 50px;"><h2>제출 완료!</h2></div>';
-            });
+            if (allData[i].task_type === 'conversation_reaction_time') {
+                // 반응시간 문항
+                rtResults.push(allData[i]);
+                console.log('반응시간 문항 발견:', allData[i]);
+            }
         }
+        
+        console.log('최종 기본 정보:', basicInfo);
+        console.log('최종 반응시간 결과:', rtResults);
+        
+        // 데이터가 제대로 있는지 확인
+        if (!basicInfo) {
+            console.log('기본 정보를 찾을 수 없습니다');
+            document.body.innerHTML = '<div style="text-align: center; padding: 50px;"><h2>데이터 오류!</h2></div>';
+            return;
+        }
+        
+        // 전송할 데이터 구성
+        var submitData = {
+            age: basicInfo.age || '',
+            sex: basicInfo.sex || '',
+            school_department: basicInfo.school_department || '',
+            growth_location: basicInfo.growth_location || '',
+            parents_region: basicInfo.parents_region || ''
+        };
+        
+        // 반응시간 데이터 추가
+        for (var j = 0; j < rtResults.length && j < 5; j++) {
+            var responseKey = Object.keys(rtResults[j].response)[0];
+            submitData['rt_q' + (j+1) + '_response'] = rtResults[j].response[responseKey] || '';
+            submitData['rt_q' + (j+1) + '_rt'] = rtResults[j].first_key_rt || '';
+            submitData['rt_q' + (j+1) + '_scenario'] = rtResults[j].scenario || '';
+        }
+        
+        console.log('전송할 데이터:', submitData);
+        
+        var scriptURL = 'https://script.google.com/macros/s/AKfycby8S_WhuthXrVQUCATPJZrhbLaLq1XnIygsuRsu1ickSN4NgmV-O0K7RySaxhKStojD/exec';
+        
+        fetch(scriptURL, {
+            method: 'POST',
+            body: JSON.stringify(submitData)
+        }).then(response => {
+            document.body.innerHTML = '<div style="text-align: center; padding: 50px;"><h2>제출 완료!</h2></div>';
+        }).catch(error => {
+            console.log('전송 오류:', error);
+            document.body.innerHTML = '<div style="text-align: center; padding: 50px;"><h2>제출 완료!</h2></div>';
+        });
+    }
     });
     // 실험 순서를 담을 배열
     var timeline = [];
@@ -184,7 +229,7 @@
 </div>
 
 <div style="font-family: monospace; background-color: white; padding: 15px; border: 1px solid #ddd;">
-<div style="margin-bottom: 8px;"><strong>A:</strong> 어!! 안녕하세요. 저 유튜브에서 봤어요!</div>
+<div style="margin-bottom: 8px;"><strong>A:</strong> 어!! 안녕하세요. 저 영상 봤어요!</div>
 <div style="margin-bottom: 8px;"><strong>B:</strong> 안녕하세요~ 정말요??</div>
 <div style="margin-bottom: 8px;"><strong>A:</strong> 네!!</div>
 <div style="margin-bottom: 8px;"><strong>B:</strong> 감사합니다~ 제 영상 어떻게 보셨어요?</div>
@@ -294,31 +339,33 @@
             <h2>설문조사가 완료되었습니다!</h2>
             <p>참여해주셔서 감사합니다.</p>
         `,
-        choices: ['결과 확인']
+        choices: ['결과 전송']
     };
 
     // 실험 순서 설정
-// 대화 상황 문항들을 배열에 담기
-    var conversation_questions = [
-        conversation_rt_question,     // 유튜버 만남
+    // 유튜버 만남 문항은 고정, 나머지만 랜덤
+    var fixed_first_question = conversation_rt_question;  // 유튜버 만남 (고정)
+
+    var random_questions = [
         conversation_rt_question_1,   // 쉐프 만남  
         conversation_rt_question_2,   // 결혼식
         conversation_rt_question_3,   // 팬 사인회
         conversation_rt_question_4    // 고양이 입양
     ];
 
-    // 배열 순서 랜덤하게 섞기
-    conversation_questions = jsPsych.randomization.shuffle(conversation_questions);
+    // 나머지 4개만 랜덤하게 섞기
+    random_questions = jsPsych.randomization.shuffle(random_questions);
 
     // 실험 순서 설정
     timeline.push(welcome);
     timeline.push(basic_questions);
-    
-    // 랜덤 순서로 대화 문항들 추가
-    for (var i = 0; i < conversation_questions.length; i++) {
-        timeline.push(conversation_questions[i]);
+    timeline.push(fixed_first_question);  // 유튜버 만남 항상 첫 번째
+
+    // 나머지 랜덤 순서로 추가
+    for (var i = 0; i < random_questions.length; i++) {
+        timeline.push(random_questions[i]);
     }
-    
+
     timeline.push(debrief);
 
     // 실험 시작!
@@ -327,8 +374,6 @@
 </script>
 
 </html>
-
-
 
 
 
