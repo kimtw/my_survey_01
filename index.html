@@ -332,16 +332,6 @@
         5
     );
 
-    // 5. 마무리 메시지
-    var debrief = {
-        type: jsPsychHtmlButtonResponse,
-        stimulus: `
-            <h2>설문조사가 완료되었습니다!</h2>
-            <p>참여해주셔서 감사합니다.</p>
-        `,
-        choices: ['결과 전송']
-    };
-
     // 실험 순서 설정
     // 유튜버 만남 문항은 고정, 나머지만 랜덤
     var fixed_first_question = conversation_rt_question;  // 유튜버 만남 (고정)
@@ -366,7 +356,6 @@
         timeline.push(random_questions[i]);
     }
 
-    timeline.push(debrief);
 
     // 실험 시작!
     jsPsych.run(timeline);
