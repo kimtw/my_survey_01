@@ -46,8 +46,8 @@
     // jsPsych 초기화
     var jsPsych = initJsPsych({
         on_finish: function() {
-            // 실험 끝나면 결과 화면에 표시 (나중에 서버 저장으로 변경 예정)
-            jsPsych.data.displayData();
+            // 참가자에게는 간단한 완료 메시지만 표시
+            document.body.innerHTML = '<div style="text-align: center; padding: 50px;"><h2>제출 완료!</h2><p>참여해주셔서 감사합니다.</p></div>';
         }
     });
 
@@ -310,5 +310,6 @@
 </script>
 
 </html>
+
 
 
