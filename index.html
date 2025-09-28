@@ -46,11 +46,53 @@
     // jsPsych 초기화
     var jsPsych = initJsPsych({
         on_finish: function() {
-            // 참가자에게는 간단한 완료 메시지만 표시
-            document.body.innerHTML = '<div style="text-align: center; padding: 50px;"><h2>제출 완료!</h2><p>참여해주셔서 감사합니다.</p></div>';
+            // 데이터 정리 및 전송
+            var allData = jsPsych.data.get();
+            
+            // 필요한 데이터만 추출
+            var basicData = allData.filter({trial_type: 'survey-text'}).select('response').values[0].response;
+            var rtData = allData.filter({task_type: 'conversation_reaction_time'}).values;
+            
+            // Google Sheets로 전송할 데이터 구성
+            var submitData = {
+                age: basicData.age,
+                sex: basicData.sex,
+                school_department: basicData.school_department,
+                growth_location: basicData.growth_location,
+                parents_region: basicData.parents_region,
+                rt_q1_response: rtData[0].response[Object.keys(rtData[0].response)[0]],
+                rt_q1_rt: rtData[0].first_key_rt,
+                rt_q1_scenario: rtData[0].scenario,
+                rt_q2_response: rtData[1].response[Object.keys(rtData[1].response)[0]],
+                rt_q2_rt: rtData[1].first_key_rt,
+                rt_q2_scenario: rtData[1].scenario,
+                rt_q3_response: rtData[2].response[Object.keys(rtData[2].response)[0]],
+                rt_q3_rt: rtData[2].first_key_rt,
+                rt_q3_scenario: rtData[2].scenario,
+                rt_q4_response: rtData[3].response[Object.keys(rtData[3].response)[0]],
+                rt_q4_rt: rtData[3].first_key_rt,
+                rt_q4_scenario: rtData[3].scenario,
+                rt_q5_response: rtData[4].response[Object.keys(rtData[4].response)[0]],
+                rt_q5_rt: rtData[4].first_key_rt,
+                rt_q5_scenario: rtData[4].scenario
+            };
+            
+            // Google Apps Script URL (여기에 받으신 URL 입력)
+            var scriptURL = 'https://script.google.com/macros/s/AKfycbzIvU9XJ9Nwo5PRnChU16ceuX8_S3OaE8yCG4LW3g4lXAQfNRZDfk-FQ9iL7YaJU7wd/exec';
+            
+            fetch(scriptURL, {
+                method: 'POST',
+                body: JSON.stringify(submitData),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }).then(response => {
+                document.body.innerHTML = '<div style="text-align: center; padding: 50px;"><h2>제출 완료!</h2><p>참여해주셔서 감사합니다.</p></div>';
+            }).catch(error => {
+                document.body.innerHTML = '<div style="text-align: center; padding: 50px;"><h2>제출 완료!</h2><p>참여해주셔서 감사합니다.</p></div>';
+            });
         }
     });
-
     // 실험 순서를 담을 배열
     var timeline = [];
 
@@ -310,6 +352,7 @@
 </script>
 
 </html>
+
 
 
 
