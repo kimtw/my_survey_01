@@ -7,6 +7,7 @@
     <!-- 필요한 플러그인들 로드 -->
     <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3"></script>
     <script src="https://unpkg.com/@jspsych/plugin-survey-text@1.1.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-button-response@1.1.3"></script>
     <!-- jsPsych 기본 스타일 -->
     <link href="https://unpkg.com/jspsych@7.3.4/css/jspsych.css" rel="stylesheet" type="text/css" />
     <!-- 모바일 최적화 스타일 -->
@@ -55,15 +56,13 @@
 
     // 1. 환영 메시지
     var welcome = {
-        type: jsPsychHtmlKeyboardResponse,
+        type: jsPsychHtmlButtonResponse,
         stimulus: `
             <h2>설문조사에 참여해주셔서 감사합니다!</h2>
             <p>이 설문은 다섯 문항으로 이루어져 있고 약 2분 정도 소요됩니다.</p>
-            <p><strong>아무 키나 누르거나 화면을 터치하여 시작하세요.</strong></p>
         `,
-        choices: "ALL_KEYS" // 모든 키/터치 허용
+        choices: ['시작하기']
     };
-
     // 2. 일반 텍스트 질문들
     var basic_questions = {
         type: jsPsychSurveyText,
@@ -273,12 +272,12 @@
 
     // 5. 마무리 메시지
     var debrief = {
-        type: jsPsychHtmlKeyboardResponse,
+        type: jsPsychHtmlButtonResponse,
         stimulus: `
             <h2>설문조사가 완료되었습니다!</h2>
             <p>참여해주셔서 감사합니다.</p>
         `,
-        choices: "ALL_KEYS"
+        choices: ['결과 확인']
     };
 
     // 실험 순서 설정
@@ -311,4 +310,5 @@
 </script>
 
 </html>
+
 
