@@ -2,6 +2,8 @@
 <html>
 <head>
     <title>My Survey</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- jsPsych 라이브러리 로드 -->
     <!-- jsPsych 라이브러리 로드 -->
     <script src="https://unpkg.com/jspsych@7.3.4"></script>
     <!-- 필요한 플러그인들 로드 -->
@@ -35,6 +37,25 @@
             /* 대화 내용 크기 조정 */
             div[style*="font-family: monospace"] {
                 font-size: 16px !important;
+            }
+            
+            /* 모바일 확대 방지 - 여기에 추가 */
+            input, textarea, select {
+                font-size: 16px !important;
+                zoom: 1;
+                -webkit-appearance: none;
+                border-radius: 0;
+            }
+            
+            body {
+                -webkit-text-size-adjust: 100%;
+                -ms-text-size-adjust: 100%;
+                zoom: 1;
+            }
+            
+            .jspsych-content-wrapper {
+                zoom: 1;
+                -webkit-text-size-adjust: 100%;
             }
         }
     </style>
