@@ -65,6 +65,12 @@
 
     // jsPsych 초기화
     var jsPsych = initJsPsych({
+        on_trial_start: function() {
+        // 각 trial 시작 시 페이지 맨 위로 스크롤
+        window.scrollTo(0, 0);
+        document.body.scrollTop = 0; // Safari용
+        document.documentElement.scrollTop = 0; // Chrome, Firefox 등
+    },
         on_finish: function() {
         // 올바른 데이터 접근 방식
         var allData = jsPsych.data.get().values();
@@ -384,6 +390,7 @@
 </script>
 
 </html>
+
 
 
 
