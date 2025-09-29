@@ -118,11 +118,24 @@
         };
         
         // 반응시간 데이터 추가
-        for (var j = 0; j < rtResults.length && j < 5; j++) {
-            var responseKey = Object.keys(rtResults[j].response)[0];
-            submitData['rt_q' + (j+1) + '_response'] = rtResults[j].response[responseKey] || '';
-            submitData['rt_q' + (j+1) + '_rt'] = rtResults[j].first_key_rt || '';
-            submitData['rt_q' + (j+1) + '_scenario'] = rtResults[j].scenario || '';
+        var scenarioOrder = ['유튜버 만남', '쉐프 만남', '결혼식', '팬 사인회', '고양이 입양'];
+        var sortedRtResults = [];
+        
+        for (var k = 0; k < scenarioOrder.length; k++) {
+            for (var m = 0; m < rtResults.length; m++) {
+                if (rtResults[m].scenario === scenarioOrder[k]) {
+                    sortedRtResults.push(rtResults[m]);
+                    break;
+                }
+            }
+        }
+        
+        // 정렬된 순서대로 데이터 추가
+        for (var j = 0; j < sortedRtResults.length && j < 5; j++) {
+            var responseKey = Object.keys(sortedRtResults[j].response)[0];
+            submitData['rt_q' + (j+1) + '_response'] = sortedRtResults[j].response[responseKey] || '';
+            submitData['rt_q' + (j+1) + '_rt'] = sortedRtResults[j].first_key_rt || '';
+            submitData['rt_q' + (j+1) + '_scenario'] = sortedRtResults[j].scenario || '';
         }
         
         console.log('전송할 데이터:', submitData);
@@ -390,6 +403,7 @@
 </script>
 
 </html>
+
 
 
 
